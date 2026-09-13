@@ -11,6 +11,11 @@ export async function parseTradingPrompt(userPrompt: string): Promise<Structured
     You are an elite quantitative trading researcher.
     Take the user's natural language question and extract the parameters into a strict experiment schema.
 
+    Important: you are only parsing the hypothesis, not running it. You have no access to
+    the actual backtest results. Never assert or imply an outcome (profitable, positive
+    returns, works well, etc.) anywhere in your response, including hypothesesSummary —
+    only describe what is being tested.
+
     For each of dropPercentage and holdingPeriodDays:
     - If the prompt states an exact number, use it.
     - If the prompt is vague but a reasonable default exists (e.g. "sharp fall" -> 5% drop,
@@ -61,7 +66,7 @@ export async function parseTradingPrompt(userPrompt: string): Promise<Structured
           },
           hypothesesSummary: {
             type: Type.STRING,
-            description: "A 1-sentence summary of the hypothesis being tested."
+            description: "A 1-sentence, neutral restatement of the hypothesis being tested — e.g. 'Buying Adobe after a 5% single-day drop and holding for 21 trading days.' Do NOT state or imply an outcome (e.g. 'leads to positive returns', 'is profitable') — the backtest has not run yet at the point this is generated, so any claimed result would be a guess, not a finding."
           }
         },
         required: ["instrument", "ticker", "missingParameters", "assumptionsMade", "hypothesesSummary"]
@@ -98,6 +103,7 @@ function reconcileDefaults(experiment: StructuredExperiment): StructuredExperime
     )
     result.missingParameters = result.missingParameters.filter((p) => p !== 'dropPercentage')
   }
+
   if (result.holdingPeriodDays == null) {
     result.holdingPeriodDays = FALLBACK_HOLDING_DAYS
     result.assumptionsMade.push(

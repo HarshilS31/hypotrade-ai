@@ -42,6 +42,14 @@ export async function runBacktest(
   let cumulativeReturn = 0;
   let totalTrades = 0;
 
+  // Track win/loss split and worst single trade as we go, so this stays a
+  // single pass over the data rather than a second loop over `trades`
+  // (which may be truncated by maxTrades and wouldn't be a full picture anyway).
+  let cumulativeWinReturn = 0;
+  let cumulativeLossReturn = 0;
+  let losingTrades = 0;
+  let largestLoss = 0;
+
   for (let i = 1; i < closes.length - holdDays; i++) {
     const yesterday = closes[i - 1];
     const today = closes[i];
@@ -57,7 +65,16 @@ export async function runBacktest(
       const profitPercentage = ((exitPrice - entryPrice) / entryPrice) * 100;
 
       totalTrades++;
-      if (profitPercentage > 0) winningTrades++;
+      if (profitPercentage > 0) {
+        winningTrades++;
+        cumulativeWinReturn += profitPercentage;
+      } else if (profitPercentage < 0) {
+        losingTrades++;
+        cumulativeLossReturn += profitPercentage;
+        if (profitPercentage < largestLoss) {
+          largestLoss = profitPercentage;
+        }
+      }
       cumulativeReturn += profitPercentage;
 
       if (includeTrades && (maxTrades === undefined || trades.length < maxTrades)) {
@@ -67,18 +84,23 @@ export async function runBacktest(
           entryPrice,
           exitPrice,
           profitPercentage
-        });
+        })
       }
     }
   }
 
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
   const averageReturn = totalTrades > 0 ? cumulativeReturn / totalTrades : 0;
+  const averageWinReturn = winningTrades > 0 ? cumulativeWinReturn / winningTrades : 0;
+  const averageLossReturn = losingTrades > 0 ? cumulativeLossReturn / losingTrades : 0;
 
   return {
     totalTrades,
     winRate: Number(winRate.toFixed(2)),
     averageReturn: Number(averageReturn.toFixed(2)),
+    largestLoss: Number(largestLoss.toFixed(2)),
+    averageWinReturn: Number(averageWinReturn.toFixed(2)),
+    averageLossReturn: Number(averageLossReturn.toFixed(2)),
     trades
-  };
+  }
 }
