@@ -8,7 +8,7 @@ dns.setServers(['8.8.8.8','8.8.4.4'])
 const app = express()
 app.use(express.json())
 app.use(cors({
-  origin:['http://locahost:5000' , 'http://localhost:5173'],
+  origin:[process.env.VITE_BASE_API_URL as string, 'http://localhost:5173'],
   credentials:true
 }))
 app.use('/api',apiRoutes)
