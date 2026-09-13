@@ -8,8 +8,8 @@ dns.setServers(['8.8.8.8','8.8.4.4'])
 const app = express()
 app.use(express.json())
 app.use(cors({
-  origin:[process.env.VITE_BASE_API_URL as string, 'http://localhost:5173'],
-  credentials:true
+  origin: [process.env.ALLOWED_ORIGIN as string, 'http://localhost:5173'],
+  credentials: true
 }))
 app.use('/api',apiRoutes)
 const PORT = process.env.PORT || 5000;
