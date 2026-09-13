@@ -1,20 +1,19 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { StructuredExperiment } from "../types/interfaces.js";
-import dotenv from "dotenv";
+import { GoogleGenAI, Type } from "@google/genai"
+import { StructuredExperiment } from '../types/interfaces.js'
+import dotenv from "dotenv"
 
-dotenv.config();
+dotenv.config()
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" })
 
 export async function parseTradingPrompt(userPrompt: string): Promise<StructuredExperiment> {
   const systemInstruction = `
     You are an elite quantitative trading researcher. 
     Take the user's natural language question and extract the parameters into a strict experiment schema.
     If a parameter like "drop percentage" or "holding period" is vague (e.g., "sharp fall"), return null for that value, explicitly list it in missingParameters, and state your default assumption in assumptionsMade.
-  `;
-
+  `
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     contents: `Analyze this prompt: "${userPrompt}"`,
     config: {
       systemInstruction,
@@ -24,7 +23,11 @@ export async function parseTradingPrompt(userPrompt: string): Promise<Structured
         properties: {
           instrument: { 
             type: Type.STRING, 
-            description: "Target asset (e.g., NIFTY). Default to NIFTY." 
+            description: "Target asset human-readable name (e.g., NIFTY, Tesla, Reliance). Default to NIFTY." 
+          },
+          ticker: {
+            type: Type.STRING,
+            description: "The exact Yahoo Finance ticker symbol (e.g., ^NSEI for NIFTY, TSLA for Tesla, AAPL for Apple, RELIANCE.NS for Reliance, ^NSEBANK for Bank Nifty). Always resolve this correctly."
           },
           dropPercentage: { 
             type: Type.NUMBER, 
@@ -51,14 +54,14 @@ export async function parseTradingPrompt(userPrompt: string): Promise<Structured
             description: "A 1-sentence summary of the hypothesis being tested."
           }
         },
-        required: ["instrument", "missingParameters", "assumptionsMade", "hypothesesSummary"]
+        required: ["instrument", "ticker", "missingParameters", "assumptionsMade", "hypothesesSummary"]
       }
     }
-  });
+  })
 
   if (!response.text) {
-    throw new Error("Empty response from AI");
-  }
-
-  return JSON.parse(response.text) as StructuredExperiment;
+    throw new Error("Empty response from AI")
+  }  
+  const parsed = JSON.parse(response.text)
+  return parsed as StructuredExperiment
 }
